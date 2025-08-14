@@ -1,10 +1,9 @@
 const connectToDatabase = require('../_lib/db');
 const Product = require('../_lib/models/Product');
 const getJsonBody = require('../_lib/getBody');
+const sampleProducts = require('../_lib/sampleProducts');
 
 module.exports = async function handler(req, res) {
-  await connectToDatabase();
-
   const {
     query: { id },
     method
@@ -12,11 +11,24 @@ module.exports = async function handler(req, res) {
 
   if (method === 'GET') {
     try {
-      const product = await Product.findById(id);
-      if (!product) {
-        return res.status(404).json({ success: false, message: 'Product not found' });
+      // Try database first
+      try {
+        await connectToDatabase();
+        const product = await Product.findById(id);
+        if (product) {
+          return res.status(200).json({ success: true, data: product });
+        }
+      } catch (dbError) {
+        console.log('Database error, using static data:', dbError.message);
       }
-      return res.status(200).json({ success: true, data: product });
+      
+      // Fallback to static data
+      const product = sampleProducts.find(p => p._id === id);
+      if (product) {
+        return res.status(200).json({ success: true, data: product, source: 'static' });
+      }
+      
+      return res.status(404).json({ success: false, message: 'Product not found' });
     } catch (error) {
       return res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
@@ -24,6 +36,7 @@ module.exports = async function handler(req, res) {
 
   if (method === 'PUT') {
     try {
+      await connectToDatabase();
       const body = await getJsonBody(req);
       const product = await Product.findByIdAndUpdate(id, body, { new: true, runValidators: true });
       if (!product) {
@@ -37,6 +50,7 @@ module.exports = async function handler(req, res) {
 
   if (method === 'DELETE') {
     try {
+      await connectToDatabase();
       const product = await Product.findByIdAndDelete(id);
       if (!product) {
         return res.status(404).json({ success: false, message: 'Product not found' });
