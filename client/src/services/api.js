@@ -54,14 +54,14 @@ class ApiService {
 
   // Get product by ID
   async getProductById(id) {
-    const response = await this.request(`/products/${id}`);
+    const response = await this.request(`/products/detail?id=${id}`);
     return response.data || response;
   }
 
   // Get products by category
   async getProductsByCategory(category, params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    const endpoint = `/products/category/${category}${queryString ? `?${queryString}` : ''}`;
+    const queryString = new URLSearchParams({ category, ...params }).toString();
+    const endpoint = `/products/category?${queryString}`;
     const response = await this.request(endpoint);
     return response.data || response;
   }
